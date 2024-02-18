@@ -383,20 +383,23 @@ data.generation.type <- function(type, exposure, seed){
     reopen = reopen_rows %>% dplyr::select(Id, SetMonth, EventMonth, OpenInd)
   )
 }
-
+data.generation.type <- memoise::memoise(data.generation.type)
 
 
 data.generation <- function(seed, future_info = FALSE){
   
   exposure = c(40000, 30000, 10000, 40000, 20000, 20000)
   seeds = seed + c(0:5)
-  
+  #CLAIMS <- matrix(NA, nrow = 19764+22803+25807+40920+48902+61574, ncol = 15) # valid for seed = 1000 
   for (type in c(1:6)) {
     if (type == 1) {
       # Initialise loop
       data_list <- data.generation.type(type, exposure[type], seeds[type])
       # get individual data components
       claims <- data_list$claims
+      cat("dim(claims): ", "\n")      
+      print(dim(claims))
+      cat("\n")
       paid   <- data_list$paid
       reopen <- data_list$reopen
     } else {
@@ -406,6 +409,9 @@ data.generation <- function(seed, future_info = FALSE){
       data_list$paid$Id <- data_list$paid$Id + nrow(claims)
       data_list$reopen$Id <- data_list$reopen$Id + nrow(claims)
       claims <- rbind(claims, data_list$claims)
+      cat("dim(claims): ", "\n")      
+      print(dim(claims))
+      cat("\n")
       paid   <- rbind(paid, data_list$paid)
       reopen <- rbind(reopen, data_list$reopen)
     }
@@ -487,4 +493,4 @@ data.generation <- function(seed, future_info = FALSE){
     full_claims = full_claims, full_paid = full_paid, reopen = reopen
   )
 }
-
+data.generation <- memoise::memoise(data.generation)

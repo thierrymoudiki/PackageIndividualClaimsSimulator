@@ -13,12 +13,17 @@
 #### load packages
 #####################################################################
 
+utils::install.packages("pak")
+
+pak::pak(c("SynthETIC", "plyr", "locfit", "dplyr", "actuar", "tidyr", "reshape2", "ChainLadder", "memoise"))
+
 library(SynthETIC)  # 1.0.0 or higher needed
 library(plyr)
 library(locfit)
 library(dplyr)
 library(actuar)
 library(tidyr)
+library(memoise)
 
 ref_claim <- 1          # currency is 1
 time_unit <- 1/12       # we consider monthly claims development
@@ -27,8 +32,9 @@ set_parameters(ref_claim=ref_claim, time_unit=time_unit)
 years <- 10               # number of occurrence years
 I <- years/time_unit      # number of development periods
 
-source("./Tools/functions simulation.R")
-dest_path <- "" # plot to be saved in ...
+setwd(".") # set working directory
+source("Tools/functions simulation.r")
+dest_path <- "." # plot to be saved in ...
 
 #####################################################################
 #### generate claim data
@@ -60,7 +66,7 @@ str(paid)
 #### claims count and reporting
 #####################################################################
 
-source("./Tools/functions plotting.R")
+source("./Tools/functions plotting.r")
 
 # get reported claims
 rep_claims <- claims %>% 
@@ -70,7 +76,7 @@ rep_claims <- claims %>%
     RepWeek = ceiling((as.integer(difftime(RepDate, as.Date("2011-12-31"), units="days"))-.5)/7))
 
 # plot accident dates vs reporting delays
-save.yes <- 1
+#save.yes <- 1
 save.yes <- 0
 for (type in c(1:6)) {
   plot_triangle(
@@ -118,7 +124,7 @@ if (save.yes==1){
 range(claims$Ultimate)
 
 # claim size density plot
-save.yes <- 1
+#save.yes <- 1
 save.yes <- 0
 if (save.yes==1) {
   pdf(file=paste(dest_path, "Density.pdf", sep=""))
@@ -137,7 +143,7 @@ logp_data <- claims %>% filter(Ultimate > 0) # exclude zero-claims for logged pl
 pp <- ecdf(logp_data$Ultimate)
 set.seed(100)
 ll <- sample(x=c(1:nrow(logp_data)), size=2000)
-save.yes <- 1
+#save.yes <- 1
 save.yes <- 0
 if (save.yes==1) {
   pdf(file=paste(dest_path, "LogLog.jpeg", sep=""))
@@ -151,7 +157,7 @@ if (save.yes==1) {
 }
 
 # plot of ultimate claims per claim type
-save.yes <- 1
+#save.yes <- 1
 save.yes <- 0
 if (save.yes==1) {
   pdf(file=paste(dest_path, "UltimatesType.pdf", sep=""))
@@ -452,7 +458,9 @@ for (jj in 2:ncol(paid_triangle)){
 
 # apply Mack chain-ladder
 units1 <- 1
+start <- proc.time()[3]
 M <- MackChainLadder(paid_triangle/units1, est.sigma="Mack")
+cat("Elapsed time for MackCL: ", proc.time()[3] - start, "\n")
 tt <- round(cbind(M$FullTriangle[, J], True$CC, M$FullTriangle[, J] - True$CC, M$Mack.S.E[, J]))
 tt <- cbind(tt, round(100 * abs(tt[,3]/tt[,4]), 1)) # % error
 tt <- data.frame(
