@@ -42,16 +42,23 @@ dest_path <- "." # plot to be saved in ...
 #### generate claim data
 #####################################################################
 
-n_reps <- 250L
+n_reps <- 100L
 
 claims_data <- vector("list", n_reps)
 
-pb <- utils::txtProgressBar(min=1, max=n_reps, style = 3)
+pb <- utils::txtProgressBar(min=1L, 
+                            max=n_reps, 
+                            style = 3L)
 
 for (i in 1:n_reps)
 {
   # generate individual claims: may take 60 seconds
-  claims_list <- data.generation(seed=123L+i*100L, future_info=TRUE)
+  claims_list <- try(data.generation(seed=123L+i*100L, future_info=TRUE),
+                     silent = TRUE) 
+  if (inherits(claims_list, "try-error"))
+  {
+    next 
+  }
   
   # save individual output for easier access
   claims <- claims_list[[1]]
@@ -310,13 +317,13 @@ for (i in 1:n_reps)
   if (save.yes==1) {
     pdf(file=paste(dest_path, "SettlementDelay.pdf", sep=""))
   }
-  plot(
-    density(closed_claims$SetDelMonths, from=0), col="blue", lwd=2, 
-    main=list("empirical density of settlement delay", cex=1.5), 
-    xlab="settelement delay (monthly units)", ylab="empirical density", cex.lab=1.5)
-  if (save.yes==1) {
-    dev.off()
-  }
+  # plot(
+  #   density(closed_claims$SetDelMonths, from=0), col="blue", lwd=2, 
+  #   main=list("empirical density of settlement delay", cex=1.5), 
+  #   xlab="settelement delay (monthly units)", ylab="empirical density", cex.lab=1.5)
+  # if (save.yes==1) {
+  #   dev.off()
+  # }
   
   # boxplots of settlement delays per claim type
   save.yes <- 1
@@ -324,13 +331,13 @@ for (i in 1:n_reps)
   if (save.yes==1) {
     pdf(file=paste(dest_path, "SettlementDelayClaimType.pdf", sep=""))
   }
-  boxplot(
-    SetDelMonths ~ Type, data=closed_claims, col=col_type, 
-    ylab="settlement delay (in months)", xlab="claim type", cex.lab=1.5, 
-    main=list("settlement delays per claim type", cex=1.5))
-  if (save.yes==1) {
-    dev.off()
-  }
+  # boxplot(
+  #   SetDelMonths ~ Type, data=closed_claims, col=col_type, 
+  #   ylab="settlement delay (in months)", xlab="claim type", cex.lab=1.5, 
+  #   main=list("settlement delays per claim type", cex=1.5))
+  # if (save.yes==1) {
+  #   dev.off()
+  # }
   
   # boxplots of settlement delay vs binned claim size
   closed_claims$UltiClass <- pmin(round_any(closed_claims$Ultimate, 1000, f = ceiling), 100000)
@@ -340,13 +347,13 @@ for (i in 1:n_reps)
   if (save.yes==1) {
     pdf(file=paste(dest_path, "SettlementDelayClaimSize1.pdf", sep=""))
   }
-  boxplot(
-    SetDelMonths ~ UltiClass, data=closed_claims, col=col_claimsize, 
-    ylab="settlement delay (in months)", xlab="ultimate claim size", cex.lab=1.5, 
-    main=list("settlement delays per ultimate claim size", cex=1.5))
-  if (save.yes==1) {
-    dev.off()
-  }
+  # boxplot(
+  #   SetDelMonths ~ UltiClass, data=closed_claims, col=col_claimsize, 
+  #   ylab="settlement delay (in months)", xlab="ultimate claim size", cex.lab=1.5, 
+  #   main=list("settlement delays per ultimate claim size", cex=1.5))
+  # if (save.yes==1) {
+  #   dev.off()
+  # }
   
   # settlement delay vs claim size (line graph)
   plot_data <- closed_claims %>%
@@ -358,19 +365,6 @@ for (i in 1:n_reps)
   save.yes <- 0
   if (save.yes==1) {
     pdf(file=paste(dest_path, "SettlementDelayClaimSize2.pdf", sep=""))
-  }
-  with(
-    plot_data, {
-      plot(x=UltiClass, y=mean_SetDel, ylim=range(mean_SetDel + sd_SetDel, mean_SetDel - sd_SetDel, 0), type='l', ylab="settlement delay (in months)", xlab="ultimate claim size", cex.lab=1.5, main=list("settlement delays per ultimate claim size", cex=1.5))
-      lines(x=UltiClass, y=mean_SetDel+sd_SetDel, col="darkgray")
-      lines(x=UltiClass, y=mean_SetDel-sd_SetDel, col="darkgray")
-      lines(x=UltiClass, y=predict(locfit(mean_SetDel ~ UltiClass, alpha=.5, deg=2), newdata = UltiClass), col="orange", lwd=2) 
-      abline(h=mean(mean_SetDel), lty=3)
-      legend(x="topright", cex=1.25,  lty=rep(1,3), lwd=c(1,1,2), col=c("black", "darkgray", "orange"), legend=c("empirical mean", "1 std.dev.", "spline fit"))
-    }
-  )
-  if (save.yes==1) {
-    dev.off()
   }
   
   
@@ -470,7 +464,6 @@ for (i in 1:n_reps)
   claims_data[[i]]$True <- True
   
   utils::setTxtProgressBar(pb, i)
-  
 }
 
 close(pb)
