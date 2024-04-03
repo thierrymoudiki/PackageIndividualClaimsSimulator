@@ -468,23 +468,47 @@ for (i in 1:n_reps)
 
 close(pb)
 
-saveRDS(claims_data, "claims_data.rds")
+#saveRDS(claims_data, "claims_data.rds")
+claims_data <- readRDS(file = "./claims_data.rds") 
 
+n_reps <- 20L
+claims_data2 <- vector("list", n_reps)
+  
+i <- 1
+j <- 1
+pb <- utils::txtProgressBar(min=0, max=length(claims_data2), style = 3)
+for (i in 1:length(claims_data))
+{
+  if (!is.null(claims_data[[i]]) && j <= n_reps)
+  {
+    if (!is.na(claims_data[[i]]$paid_triangle[(years-1), 2L]) && (claims_data[[i]]$paid_triangle[1, years] == claims_data[[i]]$True$CC[1]))
+    {
+      claims_data2[[j]]$paid_triangle <- claims_data[[i]]$paid_triangle
+      if (!any(is.na(claims_data2[[j]]$paid_triangle[years, ])))
+      {
+        claims_data2[[j]]$paid_triangle[years, -1] <- NA 
+      }
+      claims_data2[[j]]$True <- as.vector(claims_data[[i]]$True$CC)
+      j <- j + 1 
+    }
+  }
+  utils::setTxtProgressBar(pb, i)
+}
+close(pb)
 
-# # apply Mack chain-ladder
-# units1 <- 1
-# start <- proc.time()[3]
-# M <- MackChainLadder(paid_triangle/units1, est.sigma="Mack")
-# cat("Elapsed time for MackCL: ", proc.time()[3] - start, "\n")
-# tt <- round(cbind(M$FullTriangle[, J], True$CC, M$FullTriangle[, J] - True$CC, M$Mack.S.E[, J]))
-# tt <- cbind(tt, round(100 * abs(tt[,3]/tt[,4]), 1)) # % error
-# tt <- data.frame(
-#   rbind(
-#     tt, 
-#     c(colSums(tt[,1:3]), round(M$Total.Mack.S.E), round(100 * sum(tt[,3])/M$Total.Mack.S.E, 1)))
-# )
-# names(tt) <- c("ChainLadder", "True", "Difference", "RMSEP", "%")
-# tt
-# 
-# 
-# 
+saveRDS(claims_data2, file = "./claims_data2.rds")
+
+data_matrix <- as.matrix(claims_data2[[1]]$paid_triangle)
+rownames(data_matrix) <- seq_len(years)
+data_triangle <- ChainLadder::cum2incr(ChainLadder::as.triangle(data_matrix))
+data_long_triangle <- ChainLadder::as.LongTriangle(data_triangle, na.rm = FALSE)
+data_long_triangle$origin <- as.numeric(data_long_triangle$origin)
+data_long_triangle$dev <- as.numeric(data_long_triangle$dev)
+data_long_triangle$current_year <- data_long_triangle$origin + data_long_triangle$dev
+data_long_triangle <- data_long_triangle[order(data_long_triangle$current_year, 
+                                               decreasing = FALSE), ]
+training <- subset(data_long_triangle, !is.na(value))
+training <- training[, c("origin", "dev", "current_year", "value")]
+test <- subset(data_long_triangle, is.na(value))
+test$value <- NULL 
+
